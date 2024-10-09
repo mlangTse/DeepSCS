@@ -5,7 +5,7 @@ import numpy as np
 from tqdm import tqdm
 from numpy import *
 import time
-from utils import find_all_neighbors_bynx
+from utils import find_all_neighbors_bynx, matchConstrainst
 
 def parse_args():
     """
@@ -25,50 +25,10 @@ def subgraph_density(candidate_score, avg_weight):
     weight_gain = (sum(candidate_score)-len(candidate_score)*avg_weight)/(len(candidate_score)**0.5)
     return weight_gain
 
-
-def mwg_subgraph_heuristic(query_index, graph_score, graph):
-
-    candidates = query_index
-
-    selected_candidate = candidates
-    max_density = -1000
-
-    avg_weight = sum(graph_score)/len(graph_score)
-
-    count = 0
-    endpoint = int(0.50*len(graph_score))
-    if endpoint >= 10:
-        endpoint = 100
-    
-    while True:
-
-        neighbors = find_all_neighbors_bynx(candidates, graph)
-        
-        if len(neighbors) == 0 or count>endpoint:
-            break
-        
-        # select the index with the largest score.
-        neighbor_score = [graph_score[i]for i in neighbors]
-        i_index = neighbor_score.index(max(neighbor_score))
-        
-        candidates = candidates+[neighbors[i_index]]
-
-        candidate_score = [graph_score[i]for i in candidates]
-        candidates_density = subgraph_density(candidate_score, avg_weight)
-        if candidates_density > max_density:
-            max_density = candidates_density
-            selected_candidate = candidates
-        else:
-            break
-
-        count += 1
-    
-    return selected_candidate
-
-def mwg_subgraph_heuristic_fast(query_index, graph_score, graph):
+def mwg_subgraph_heuristic_fast(query_index, graph_score, graph, Ofeature):
 
     candidates = query_index
-
+    candidates_cstt = query_index
     selected_candidate = candidates
     max_density = -1000
 
@@ -116,12 +76,21 @@ def mwg_subgraph_heuristic_fast(query_index, graph_score, graph):
             new_neighbors_score = [graph_score[i]for i in new_neighbors_unique]
             current_neighbors = current_neighbors+new_neighbors_unique
             current_neighbors_score = current_neighbors_score+new_neighbors_score
+            
+            for i in len(Ofeature[0]):
+                curFeature = Ofeature[candidates_cstt]
+                newFeature = Ofeature[new_neighbors_unique]
+                
+                if curFeature[np.argmin(curFeature, axis = 0)] > newFeature[np.argmin(newFeature, axis = 0)]:
+                    candidates_cstt[np.argmin(curFeature, axis = 0)] = new_neighbors_unique[np.argmin(newFeature, axis = 0)]
 
         else:
             break
 
         count += 1
-    
+        
+    candidate_neighbors = find_all_neighbors_bynx(candidates, graph)
+    selected_candidate = selected_candidate + matchConstrainst(candidate_neighbors, candidates_cstt, Ofeature)
     return selected_candidate
 
 if __name__ == "__main__":
@@ -145,6 +114,7 @@ if __name__ == "__main__":
         file_path = './dataset/'+args.dataset+'_pyg.pt'
     data_list = torch.load(file_path)
     adj = data_list[0]
+    Ofeature = data_list[2]
 
     graph = coo_matrix_to_nx_graph_efficient(adj)
     
@@ -164,8 +134,7 @@ if __name__ == "__main__":
     y_pred = torch.zeros_like(query_score)
     for i in tqdm(range(query_score.shape[0])):
         query_index = (torch.nonzero(query[i]).squeeze()).reshape(-1)
-        #selected_candidates = mwg_subgraph_heuristic(query_index.tolist(), query_score[i].tolist(), graph)
-        selected_candidates = mwg_subgraph_heuristic_fast(query_index.tolist(), query_score[i].tolist(), graph)
+        selected_candidates = mwg_subgraph_heuristic_fast(query_index.tolist(), query_score[i].tolist(), graph, Ofeature)
         for j in range(len(selected_candidates)):
             y_pred[i][selected_candidates[j]] = 1
 

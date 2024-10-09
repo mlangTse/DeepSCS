@@ -21,7 +21,7 @@ def get_dataset(dataset, pe_dim):
     graph = dgl.from_scipy(adj_scipy)
     lpe = utils.laplacian_positional_encoding(graph, pe_dim)
     # print(len(features), len(lpe), len(features[0]))
-#        features = torch.cat((features, lpe), dim=1)
+    # features = torch.cat((features, lpe), dim=1)
     # print(len(features[0]))
 
     # print(type(adj), type(features))

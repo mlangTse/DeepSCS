@@ -116,8 +116,6 @@ def laplacian_positional_encoding(g, pos_enc_dim):
 
     return lap_pos_enc
 
-
-
 def re_features(adj, features, K):
     #传播之后的特征矩阵,size= (N, 1, K+1, d )
     nodes_features = torch.empty(features.shape[0], 1, K+1, features.shape[1])
@@ -137,7 +135,6 @@ def re_features(adj, features, K):
             nodes_features[index, 0, i + 1, :] = x[index]        
 
     nodes_features = nodes_features.squeeze()
-
 
     return nodes_features
 
@@ -472,3 +469,19 @@ def MaxMinNormalization(x, Min, Max):
 
     return x
 
+def matchConstrainst(candidate_neighbors, candidates_cstt, Ofeature):
+    newC = []
+    for i in candidate_neighbors:
+        curFeature = Ofeature[i]
+        newFeature = Ofeature[candidates_cstt]
+        
+        flag = 1
+        for j in range(len(Ofeature[0])):
+            if curFeature[j] < newFeature[j]:
+                flag = 0
+                break
+            
+        if flag:
+            newC.append(i)
+        
+    return newC

@@ -92,7 +92,7 @@ if __name__ == "__main__":
             # print(node_tensor)
             
             # print(node_tensor.shape, neighbor_tensor.shape, adj_.shape, minus_adj.shape)
-            loss_train = model.contrastive_link_loss(node_tensor, neighbor_tensor, adj_, minus_adj)
+            loss_train = model.dominance_link_loss(node_tensor, neighbor_tensor, adj_, minus_adj)
             loss_train.backward()
             optimizer.step()
             lr_scheduler.step()

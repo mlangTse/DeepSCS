@@ -31,11 +31,11 @@ class PretrainModel(nn.Module):
         self.marginloss = nn.MarginRankingLoss(0.5)
 
     def forward(self, x):
-        node_tensor, neighbor_tensor = self.encoder(x) # (batch_size, 1, hidden_dim), (batch_size, hops, hidden_dim)
+        node_tensor, neighbor_tensor = self.encoder(top_k(x)) # (batch_size, 1, hidden_dim), (batch_size, hops, hidden_dim)
         neighbor_tensor = self.readout(neighbor_tensor, torch.tensor([0]).to(self.config.device)) # (batch_size, 1, hidden_dim)
         return node_tensor.squeeze(), neighbor_tensor.squeeze()
 
-    def contrastive_link_loss(self, node_tensor, neighbor_tensor, adj_, minus_adj):
+    def dominance_link_loss(self, node_tensor, neighbor_tensor, adj_, minus_adj):
         shuf_index = torch.randperm(node_tensor.shape[0])
 
         node_tensor_shuf = node_tensor[shuf_index] 
@@ -62,3 +62,12 @@ class PretrainModel(nn.Module):
         TotalLoss += self.config.alpha*link_loss
 
         return TotalLoss
+
+def top_k(x, k=8):
+    top_values, indices = torch.topk(x, k, dim=-1) 
+    result = torch.zeros_like(x).unsqueeze(1) 
+    mask = torch.zeros_like(x)  
+    mask.scatter_(-1, indices, top_values)
+    result = torch.matmul(mask, x_reshaped)  
+    result = result.squeeze(-1)  # Shape: (N, K+1, k)
+    return result

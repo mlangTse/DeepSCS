@@ -111,3 +111,4 @@ class LGCN(nn.Module):
         neighbor_tensor = neighbor_tensor * layer_atten
         
         return node_tensor, neighbor_tensor
+    
